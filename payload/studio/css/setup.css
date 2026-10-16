@@ -1,0 +1,532 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap');
+*{box-sizing:border-box}body{margin:0;background:#151714;color:#24251f;font-family:"DM Sans",Arial,sans-serif}.phone{max-width:430px;min-height:100vh;margin:0 auto;background:#fbfaf5}.phone-head{padding:28px 22px 12px;display:flex;justify-content:space-between;align-items:end;border-bottom:1px solid #e9e5dc}.eyebrow{font-size:9px;letter-spacing:2.5px;font-weight:700;color:#74786e}.event-name{font:700 18px "Fraunces",Georgia,serif;margin-top:5px}.sync-dot{display:block;width:10px;height:10px;border-radius:50%;background:#bbb;box-shadow:0 0 0 5px rgba(187,187,187,.12)}.sync-dot.live{background:#6f9564;box-shadow:0 0 0 5px rgba(111,149,100,.12)}.phone-body{padding:18px 22px 28px}.step-label{font-size:11px;color:#777c72;letter-spacing:1.2px}.phone-body h1{font:700 31px/1.1 "Fraunces",Georgia,serif;margin:6px 0 8px}.phone-body>p{font-size:13px;line-height:1.45;color:#74786f;margin:0}.progress{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin:16px 0 18px}.progress span{height:5px;border-radius:5px;background:#dfdbd0}.progress span.active{background:#566f52}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:11px}.card{border:2px solid #ded9ce;background:#fff;border-radius:12px;overflow:hidden;text-align:left;padding:0}.card.active{border-color:#bd914b}.card span{display:block;padding:10px;font-size:12px;font-weight:700}.sample{height:108px}.sample.layout{display:grid;place-items:center;background:#eeece5;font:700 28px "Fraunces",Georgia,serif}.textarea{width:100%;min-height:135px;border:1px solid #d8d3c8;border-radius:13px;padding:12px;resize:vertical;background:#fff;font:16px Arial}.primary,.secondary{border-radius:11px;padding:12px 15px;font-weight:700}.primary{border:0;background:#566f52;color:#fff}.secondary{background:#fff;border:1px solid #d8d3c8;color:#252620}.list{display:grid;gap:10px}.choice{width:100%;border:1px solid #ddd8ce;background:#fff;border-radius:12px;text-align:left;padding:15px;font-size:16px}.choice.active{border-color:#566f52;background:#edf2e8}.check{background:#e9f0e4;border:1px solid #cbd6c4;border-radius:12px;padding:14px;margin-bottom:10px;color:#4d6348}.nav{display:flex;gap:10px;margin-top:18px}.nav>*{flex:1}
+@media(min-width:600px){.phone{border-radius:30px;min-height:844px;margin:20px auto;box-shadow:0 25px 80px rgba(0,0,0,.25)}}
+
+.pin-gate{padding-top:26px}.pin-gate h1{font:700 31px/1.1 "Fraunces",Georgia,serif;margin:8px 0}.pin-input{width:100%;margin:20px 0 10px;padding:15px;border:1px solid #d8d3c8;border-radius:12px;text-align:center;font:700 28px "DM Sans",Arial;letter-spacing:8px;background:#fff}.pin-error{min-height:20px;color:#a34e49;font-size:12px;margin-top:8px}.hidden{display:none!important}
+.phone-preview-wrap{margin:16px 0 18px}.preview-caption{font-size:9px;letter-spacing:1.8px;color:#878b82;font-weight:700;margin-bottom:7px}.phone-preview{height:205px;border-radius:14px;overflow:hidden;position:relative;border:1px solid #ddd8ce;box-shadow:0 8px 20px rgba(50,45,35,.08)}.phone-preview .shared-render-slot{position:absolute;box-sizing:border-box;border:1px dashed rgba(85,85,75,.28);overflow:hidden}.phone-preview .shared-render-text{font-weight:700}.field{display:block;margin-bottom:12px}.field>span,.control-card label{display:flex;justify-content:space-between;gap:12px;font-size:11px;font-weight:700;color:#6f746b;margin-bottom:6px}.control-card{background:#fff;border:1px solid #ddd8ce;border-radius:12px;padding:12px;margin-top:11px}.control-card input[type=range]{width:100%}.control-card output{font-weight:700;color:#566f52}.color-row{display:flex;gap:9px}.color-btn{width:34px;height:34px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px #cfcac0}.color-btn.active{box-shadow:0 0 0 2px #566f52}.cheese-sample{height:108px;display:grid;place-items:center;background:#f1efe8;font-size:36px}.switch-row{align-items:center}.switch-row input{width:22px;height:22px}.check strong{font-weight:700}
+.phone-preview .shared-render-cheese{position:absolute;right:5%;top:5%;font-size:30px;line-height:1;filter:drop-shadow(0 2px 2px rgba(0,0,0,.12))}
+
+
+/* Touch-Layout-Editor 0.9.20 */
+.layout-edit-toggle{width:100%;margin-top:10px;touch-action:manipulation}
+.layout-edit-help{margin-top:8px;padding:9px 11px;border-radius:10px;background:#eef2ea;color:#566f52;font-size:12px;line-height:1.4}
+.phone-preview.layout-editing{touch-action:none}
+.phone-preview .layout-editor-object{touch-action:none;user-select:none;cursor:move}
+.phone-preview .layout-editor-object.selected{outline:2px solid #bd914b;outline-offset:3px}
+.phone-preview .layout-editor-object .layout-resize-handle,.phone-preview .layout-editor-object .layout-rotate-handle{position:absolute;z-index:50;display:none}
+.phone-preview .layout-editor-object.selected .layout-resize-handle,.phone-preview .layout-editor-object.selected .layout-rotate-handle{display:block}
+.layout-resize-handle{width:18px!important;height:18px!important;right:-9px!important;bottom:-9px!important;border-radius:5px;background:#bd914b;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.25);touch-action:none}
+.layout-rotate-handle{width:18px!important;height:18px!important;right:-9px!important;top:-9px!important;border-radius:50%;background:#566f52;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.25);touch-action:none}
+.phone-preview .layout-editor-object img{pointer-events:none}
+
+.phone-preview.portrait {
+  height: auto;
+  aspect-ratio: 2 / 3;
+}
+
+
+.phone-preview .shared-render-slot img {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* FOTOBOX BOX-MODUS – 1024 x 600 */
+
+.box-mode {
+  max-width: none;
+  width: 100vw;
+  min-height: 100vh;
+  margin: 0;
+  border-radius: 0;
+  box-shadow: none;
+  background: #fbfaf5;
+}
+
+.box-mode .phone-head {
+  height: 68px;
+  padding: 12px 24px;
+  align-items: center;
+}
+
+.box-mode .phone-body {
+  height: calc(100vh - 68px);
+  padding: 14px 22px 18px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-rows: auto 1fr;
+  column-gap: 24px;
+  overflow: hidden;
+}
+
+.box-mode .phone-body > #setupContent {
+  display: contents;
+}
+
+.box-mode #stepLabel,
+.box-mode #title,
+.box-mode #hint,
+.box-mode #progress {
+  grid-column: 2;
+}
+
+.box-mode #stepLabel {
+  grid-row: 1;
+  align-self: end;
+}
+
+.box-mode #title {
+  grid-row: 1;
+  margin: 4px 0 0;
+  font-size: 30px;
+}
+
+.box-mode #hint {
+  grid-row: 1;
+  margin-top: 42px;
+  max-width: 560px;
+}
+
+.box-mode #progress {
+  grid-row: 1;
+  margin: 62px 0 8px;
+}
+
+.box-mode .phone-preview-wrap {
+  grid-column: 1;
+  grid-row: 1 / 3;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.box-mode .preview-caption {
+  flex: 0 0 auto;
+  margin: 0 0 6px;
+  font-size: 10px;
+}
+
+.box-mode .phone-preview {
+  flex: 1 1 auto;
+  width: 100%;
+  height: auto;
+  min-height: 0;
+  max-height: none;
+  border-radius: 12px;
+}
+
+.box-mode .phone-preview.portrait {
+  aspect-ratio: 2 / 3;
+}
+
+.box-mode #content {
+  grid-column: 2;
+  grid-row: 2;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.box-mode .grid2 {
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.box-mode .card span {
+  padding: 12px;
+  font-size: 14px;
+}
+
+.box-mode .sample {
+  height: 125px;
+}
+
+.box-mode .choice {
+  padding: 17px 18px;
+  font-size: 17px;
+  min-height: 54px;
+}
+
+.box-mode .control-card {
+  padding: 15px;
+  margin-top: 12px;
+}
+
+.box-mode .control-card label,
+.box-mode .field > span {
+  font-size: 13px;
+}
+
+.box-mode .color-btn {
+  width: 42px;
+  height: 42px;
+}
+
+.box-mode .textarea {
+  min-height: 150px;
+  font-size: 18px;
+}
+
+.box-mode .nav {
+  margin-top: 14px;
+  padding-bottom: 4px;
+}
+
+.box-mode .nav > * {
+  min-height: 56px;
+  font-size: 16px;
+}
+
+.box-mode .layout-edit-toggle {
+  min-height: 52px;
+  font-size: 16px;
+}
+
+.box-mode .layout-edit-help {
+  font-size: 14px;
+  padding: 11px 13px;
+}
+
+.box-mode .layout-resize-handle,
+.box-mode .layout-rotate-handle {
+  width: 24px !important;
+  height: 24px !important;
+}
+
+.box-mode .layout-resize-handle {
+  right: -12px !important;
+  bottom: -12px !important;
+}
+
+.box-mode .layout-rotate-handle {
+  right: -12px !important;
+  top: -12px !important;
+}
+
+
+/* STUDIO – Kopfbereich der Fotobox */
+.box-mode .studio-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.box-mode .studio-exit-button {
+  border: 1px solid #d8d3c8;
+  background: #fff;
+  color: #566f52;
+  border-radius: 10px;
+  padding: 9px 14px;
+  font: 700 11px "DM Sans", Arial, sans-serif;
+  letter-spacing: .5px;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.box-mode .studio-exit-button:active {
+  transform: scale(.98);
+  background: #edf2e8;
+}
+
+/* TEST: PIN-Gate im Box-Grid */
+.box-mode .pin-gate {
+  grid-column: 2;
+  grid-row: 1 / 3;
+  align-self: center;
+  justify-self: center;
+  width: min(520px, 90%);
+  z-index: 50;
+}
+
+.box-mode .pin-input {
+  display: block;
+  width: 100%;
+  height: 58px;
+  font-size: 28px;
+  background: #fff;
+  color: #24251f;
+  border: 1px solid #d8d3c8;
+  border-radius: 12px;
+  text-align: center;
+  position: relative;
+  z-index: 51;
+}
+
+.box-mode #pinOpen {
+  display: block;
+  width: 100%;
+  min-height: 54px;
+  position: relative;
+  z-index: 51;
+}
+
+/* PIN-TOUCH: Eingabe auf der Fotobox nach vorne holen */
+.box-mode .pin-gate {
+  position: relative;
+  z-index: 9999 !important;
+  pointer-events: auto !important;
+}
+
+.box-mode .pin-gate * {
+  pointer-events: auto !important;
+}
+
+.box-mode #pinInput {
+  position: relative;
+  z-index: 10000 !important;
+  pointer-events: auto !important;
+  touch-action: manipulation !important;
+  -webkit-user-select: text !important;
+  user-select: text !important;
+}
+
+.box-mode #pinOpen {
+  position: relative;
+  z-index: 10000 !important;
+  pointer-events: auto !important;
+  touch-action: manipulation !important;
+}
+
+/* PIN-Zahlenfeld für die Fotobox */
+.box-mode .pin-display {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  height: 48px;
+  margin: 10px 0 14px;
+}
+
+.box-mode .pin-display span {
+  width: 18px;
+  height: 18px;
+  border: 2px solid #8b9185;
+  border-radius: 50%;
+  background: transparent;
+  box-sizing: border-box;
+}
+
+.box-mode .pin-display span.filled {
+  background: #586f53;
+  border-color: #586f53;
+}
+
+.box-mode .pin-pad {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  width: 100%;
+  margin: 0 auto 14px;
+}
+
+.box-mode .pin-pad button {
+  appearance: none;
+  -webkit-appearance: none;
+  border: 1px solid #d1d0c8;
+  border-radius: 12px;
+  background: #ffffff;
+  color: #24251f;
+  min-height: 62px;
+  font: 700 25px/1 "DM Sans", Arial, sans-serif;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.box-mode .pin-pad button:active {
+  background: #e9eee6;
+  transform: scale(0.97);
+}
+
+.box-mode .pin-pad button[data-pin="clear"],
+.box-mode .pin-pad button[data-pin="back"] {
+  color: #586f53;
+  font-size: 22px;
+}
+
+.box-mode #pinOpen {
+  margin-top: 2px;
+  min-height: 58px;
+}
+
+
+/* PIN-Fehlermeldung auf der Fotobox */
+.box-mode .pin-error-large {
+  min-height: 54px;
+  margin: 8px 0 10px;
+  padding: 14px 20px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  background: #f4d7d3;
+  color: #a33f38;
+  font: 700 24px/1 "DM Sans", Arial, sans-serif;
+  letter-spacing: 1px;
+  text-align: center;
+}
+
+
+/* Grafik-Löschen im direkten Layout-Editor */
+.layout-delete-graphic {
+  width: 100%;
+  margin-top: 10px;
+  touch-action: manipulation;
+}
+
+.layout-delete-graphic:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.layout-delete-graphic:not(:disabled) {
+  border-color: #a33f38;
+  color: #a33f38;
+}
+
+.box-mode .layout-delete-graphic {
+  min-height: 52px;
+  font-size: 16px;
+}
+
+/* Kompakte Grafikauswahl direkt an der Fotobox */
+.box-mode .grid2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.box-mode .grid2 .card {
+  border-radius: 9px;
+}
+
+.box-mode .grid2 .card .cheese-sample {
+  height: 68px;
+  padding: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.box-mode .grid2 .card .cheese-sample img {
+  display: block;
+  max-width: 100%;
+  max-height: 54px;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+}
+
+.box-mode .grid2 .card span {
+  padding: 7px 8px;
+  font-size: 11px;
+  line-height: 1.15;
+}
+
+
+/* STUDIO VIRTUELLE TASTATUR */
+
+.studio-keyboard-wrap {
+  position: fixed;
+  left: 10px;
+  right: 10px;
+  bottom: 10px;
+  z-index: 9999;
+  padding: 8px 10px 10px;
+  border: 2px solid #586f53;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.98);
+  box-shadow: 0 6px 24px rgba(0,0,0,0.28);
+}
+
+.studio-keyboard-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 6px;
+  font-size: 14px;
+}
+
+.studio-keyboard-close {
+  border: 0;
+  border-radius: 7px;
+  padding: 7px 11px;
+  background: #586f53;
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+#studioKeyboardContainer {
+  width: 100%;
+}
+
+#studioKeyboardContainer #virtual-keyboard {
+  display: grid;
+  gap: 2px;
+  width: 100%;
+  margin: 0;
+  padding: 2px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+#studioKeyboardContainer .keyboard-row {
+  display: flex;
+  justify-content: center;
+  gap: 3px;
+}
+
+#studioKeyboardContainer .keyboard-button {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 38px;
+  margin: 2px;
+  padding: 5px 2px;
+  border: 1px solid #d4d0c7;
+  border-radius: 6px;
+  background: #586f53;
+  color: #fff;
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1;
+  touch-action: manipulation;
+}
+
+#studioKeyboardContainer .keyboard-button.backspace {
+  flex: 0 0 58px;
+  min-width: 58px;
+  background: #b94a48;
+  color: #fff;
+}
+
+#studioKeyboardContainer .keyboard-button.active {
+  background: #7f9278;
+  transform: scale(0.96);
+}
+
+/* Erweiterte Studio-Tastatur */
+#studioKeyboardContainer .studio-keyboard-bottom-row {
+  display: flex;
+  width: 100%;
+}
+
+#studioKeyboardContainer .studio-shift-key {
+  flex: 0 0 72px;
+  min-width: 72px;
+  font-size: 15px;
+}
+
+#studioKeyboardContainer .studio-space-key {
+  flex: 1 1 auto;
+  min-width: 0;
+  background: #697d62;
+}

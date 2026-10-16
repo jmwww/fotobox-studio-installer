@@ -1,0 +1,363 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1024,height=600,initial-scale=1">
+<title>Fotobox – Setup</title>
+<link rel="stylesheet" href="css/box.css">
+</head>
+<body>
+<main class="box-screen">
+  <header class="box-header">
+    <div>
+      <div class="eyebrow">MIT DEM HANDY EINRICHTEN</div>
+      <h1 id="boxTitle">Warte auf Handy …</h1>
+      <p id="boxSubtitle">Scanne den QR-Code und richte dein Event am Smartphone ein.</p>
+    </div>
+    <div class="live-pill"><span id="liveDot"></span><span id="liveText">Verbunden</span></div>
+  </header>
+
+  <nav class="steps" aria-label="Setup">
+    <div class="step" data-step="1"><b>1</b><span>LAYOUT</span></div>
+    <div class="step" data-step="2"><b>2</b><span>HINTERGRUND</span></div>
+    <div class="step" data-step="3"><b>3</b><span>TEXT</span></div>
+    <div class="step" data-step="4"><b>4</b><span>SCHRIFT</span></div>
+    <div class="step" data-step="5"><b>5</b><span>STIL</span></div>
+    <div class="step" data-step="6"><b>6</b><span>CHEESE</span></div>
+    <div class="step" data-step="7"><b>7</b><span>DRUCKER</span></div>
+  </nav>
+
+  <section class="box-main">
+    <div class="preview-panel">
+      <div class="preview-label">LIVE-VORSCHAU</div>
+      <div id="preview" class="preview"></div>
+      <div class="preview-meta">
+        <strong id="eventName">—</strong>
+        <span id="eventFormat">15 × 10 cm quer</span>
+      </div>
+    </div>
+
+    <aside class="connect-panel">
+      <div class="panel-kicker">HANDY VERBINDEN</div>
+      <h2 id="connectTitle">Event auswählen</h2>
+
+      <div id="eventPicker" class="event-picker">
+        <label class="pin-label-box" for="boxPinInput">EVENT-PIN</label>
+        <input id="boxPinInput" class="box-pin-input" inputmode="numeric" maxlength="4" placeholder="1234" autocomplete="one-time-code">
+        <button id="boxPinOpen" class="primary">Event laden →</button>
+        <div id="boxPinError" class="box-pin-error"></div>
+        <p class="pin-help">Die vierstellige PIN findest du im Studio unter „Abschicken“.</p>
+      </div>
+
+      <div id="setupArea" class="setup-area hidden">
+        <div class="qr-demo">
+          <img id="setupQr" src="resources_qr_setup.png" alt="QR-Code für die Fotobox-Einrichtung">
+          <span>SETUP</span>
+        </div>
+        <p class="qr-note">QR-Code scannen → Setup öffnen → Event-PIN eingeben.</p>
+        <div class="event-pin">
+          <span>PIN</span>
+          <strong id="pin">—</strong>
+        </div>
+        <button id="openSetup" class="primary">Smartphone öffnen ↗</button>
+        <button id="startBox" class="start-box hidden">Fotobox starten →</button>
+        <button id="otherEvent" class="secondary">Anderes Event</button>
+      </div>
+    </aside>
+  </section>
+
+
+  <section id="operationArea" class="operation-area hidden">
+    <div class="operation-header">
+      <div>
+        <div class="eyebrow">FOTOBOX-BETRIEB</div>
+        <h2 id="operationTitle">Bereit für das erste Foto</h2>
+      </div>
+      <div class="operation-event" id="operationEventName">—</div>
+    </div>
+    <div class="operation-body">
+      <div class="camera-card">
+        <video id="cameraVideo" autoplay playsinline muted></video>
+        <canvas id="cameraCanvas" class="hidden"></canvas>
+        <div id="cameraFallback" class="camera-fallback">
+          <div class="camera-icon">📷</div>
+          <strong>Live-Kamera</strong>
+          <span>Windows-Demo: Kamerazugriff wird beim Start angefordert.</span>
+        </div>
+        <div id="countdown" class="countdown hidden">3</div>
+        <div class="camera-status" id="cameraStatus">Kamera wird vorbereitet …</div>
+      </div>
+      <div class="operation-side">
+        <div class="shot-preview-wrap">
+          <div class="preview-label">LETZTES FOTO</div>
+          <img id="shotPreview" class="shot-preview hidden" alt="Letztes Foto">
+          <div id="shotEmpty" class="shot-empty">Noch kein Foto</div>
+        </div>
+        <button id="captureButton" class="capture-button">● FOTO AUFNEHMEN</button>
+        <div id="shotActions" class="shot-actions hidden">
+          <button id="printButton" class="print-button">Drucken</button>
+          <button id="retakeButton" class="secondary">Noch einmal</button>
+        </div>
+        <div id="printStatus" class="print-status"></div>
+        <button id="backToSetup" class="operation-back">← Zur Einrichtung</button>
+      </div>
+    </div>
+  </section>
+
+  <footer class="box-footer">
+    <span id="footerStatus">Lokale API</span>
+    <span>Fotobox Studio · Windows Demo 0.9.9</span>
+  </footer>
+</main>
+
+<script src="shared/event-schema.js?v=0.9.20"></script>
+<script src="shared/renderer.js?v=0.9.20"></script>
+<script>
+const $ = q => document.querySelector(q);
+let eventId = new URLSearchParams(location.search).get("id");
+let lastUpdated = "";
+let timer = null;
+let currentEvent = null;
+const BOX_API_BASE = location.hostname === "127.0.0.1" || location.hostname === "localhost"
+  ? "http://192.168.178.254/studio/"
+  : "";
+
+async function api(url, options={}){
+  if(location.protocol === "file:") throw new Error("BOX_FILE_PROTOCOL");
+  const r=await fetch(url,{...options,cache:"no-store",headers:{"Accept":"application/json",...(options.headers||{})}});
+  const j=await r.json();
+  if(!r.ok || !j.ok) throw new Error(j.error || `HTTP ${r.status}`);
+  return j;
+}
+
+async function checkApi(){
+  try{
+    await api(BOX_API_BASE+"api/events.php?action=list");
+    $("#liveText").textContent="API verbunden";
+    $("#liveDot").className="ok";
+    $("#footerStatus").textContent="Lokale API verbunden";
+    return true;
+  }catch(e){
+    $("#liveText").textContent = location.protocol === "file:" ? "Bitte über start_box.bat öffnen" : "API nicht erreichbar";
+    $("#liveDot").className="bad";
+    $("#footerStatus").textContent = location.protocol === "file:" ? "Falsch geöffnet: file://" : "Lokale API nicht erreichbar";
+    return false;
+  }
+}
+function esc(v){return String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;", "'":"&#39;"}[m]))}
+function dateDE(v){if(!v)return"ohne Datum";const p=String(v).split("-");return p.length===3?`${p[2]}.${p[1]}.${p[0]}`:v}
+function showPinError(message){$("#boxPinError").textContent=message||""}
+
+async function findByPin(pin){
+  // Primär über die PIN-API. Fallback über die Eventliste, damit auch
+  // ältere Eventdateien bzw. laufende Demo-Serverstände zuverlässig
+  // gefunden werden.
+  try {
+    const j = await api(BOX_API_BASE+"api/events.php?action=by-pin&pin="+encodeURIComponent(pin));
+    if (j.event) return j.event;
+  } catch (e) {
+    // Fallback below
+  }
+
+  const list = await api(BOX_API_BASE+"api/events.php?action=list");
+  const wanted = String(pin).replace(/\D/g, "");
+  const ev = (list.events || []).find(e => String(e.pin || "").replace(/\D/g, "") === wanted);
+  if (ev) return ev;
+  throw new Error("PIN nicht gefunden.");
+}
+
+async function selectEvent(id){
+  eventId=id;
+  const u=new URL(location.href);u.searchParams.set("id",id);history.replaceState({},"",u);
+  $("#eventPicker").classList.add("hidden");
+  $("#setupArea").classList.remove("hidden");
+  await loadEvent();
+  startPolling();
+}
+
+async function openByPin(){
+  const input=$("#boxPinInput");
+  const pin=input.value.replace(/\D/g,"").slice(0,4);
+  input.value=pin; showPinError("");
+  if(pin.length!==4){showPinError("Bitte genau 4 Ziffern eingeben.");return}
+  try{
+    const ev=await findByPin(pin);
+    await selectEvent(ev.id);
+  }catch(e){
+    showPinError(e.message === "PIN nicht gefunden." ? "PIN nicht gefunden. Bitte prüfen." : "Event konnte nicht geladen werden.");
+  }
+}
+
+async function loadEvent(){
+  if(!eventId)return;
+  try{
+    const status=await api(BOX_API_BASE+"api/live.php?id="+encodeURIComponent(eventId)+"&status=1");
+
+    if(status.updatedAt!==lastUpdated){
+      const j=await api(BOX_API_BASE+"api/live.php?id="+encodeURIComponent(eventId));
+      currentEvent=j.event;
+      lastUpdated=j.event.updatedAt;
+      render(j.event);
+    }
+
+    $("#liveText").textContent="Live verbunden";$("#liveDot").className="ok";
+  }catch(e){
+    $("#liveText").textContent="API nicht erreichbar";$("#liveDot").className="bad";
+  }
+}
+function startPolling(){if(timer)clearInterval(timer);timer=setInterval(loadEvent,1000)}
+function render(ev){
+  const step=Math.max(1,Math.min(7,Number(ev.design?.setupStep||1)));
+  const labels=["Layout","Hintergrund","Text","Schrift","Stil","Cheese","Drucker"];
+  const ready=ev.status==="ready" || ev.status==="approved";
+  $("#boxTitle").textContent=ready?"Event bereit für die Fotobox":`Schritt ${step} von 7 · ${labels[step-1]}`;
+  $("#boxSubtitle").textContent=ready?"Das Event ist eingerichtet und kann gestartet werden.":"Das Handy führt. Die Box zeigt live mit.";
+  $("#eventName").textContent=ev.name||"Dein Event";
+  $("#eventFormat").textContent=ev.format==="portrait"?"10 × 15 cm hoch":"15 × 10 cm quer";
+  $("#pin").textContent=ev.pin||"—";
+  FotoboxRenderer.renderToElement($("#preview"),ev);
+  document.querySelectorAll(".step").forEach(s=>s.classList.toggle("active",Number(s.dataset.step)===step));
+  $("#footerStatus").textContent="Event synchronisiert · "+new Date(ev.updatedAt).toLocaleTimeString("de-DE");
+  $("#startBox").classList.toggle("hidden",!ready);
+  $("#openSetup").textContent=ready?"Smartphone-Setup erneut öffnen ↗":"Smartphone öffnen ↗";
+}
+
+$("#boxPinOpen").onclick=openByPin;
+$("#boxPinInput").addEventListener("input",()=>$("#boxPinInput").value=$("#boxPinInput").value.replace(/\D/g,"").slice(0,4));
+$("#boxPinInput").addEventListener("keydown",e=>{if(e.key==="Enter")openByPin()});
+$("#openSetup").onclick=()=>{if(!eventId)return;window.open(`setup.html?id=${encodeURIComponent(eventId)}&source=box`,"_blank","noopener")};
+let cameraStream = null;
+let capturedDataUrl = "";
+let countdownTimer = null;
+
+function showOperation(){
+  if(!currentEvent)return;
+  $(".box-header").classList.add("hidden");
+  $(".steps").classList.add("hidden");
+  $(".box-main").classList.add("hidden");
+  $(".box-footer").classList.add("hidden");
+  $("#operationArea").classList.remove("hidden");
+  $("#operationEventName").textContent=currentEvent.name||"Event";
+  $("#operationTitle").textContent="Bereit für das erste Foto";
+  $("#cameraStatus").textContent="Kamera wird vorbereitet …";
+  startCamera();
+}
+
+async function startCamera(){
+  if(!navigator.mediaDevices?.getUserMedia){
+    $("#cameraStatus").textContent="Kamerazugriff im Browser nicht verfügbar – Windows-Demo.";
+    return;
+  }
+  try{
+    cameraStream=await navigator.mediaDevices.getUserMedia({video:{width:{ideal:1280},height:{ideal:720},facingMode:"user"},audio:false});
+    $("#cameraVideo").srcObject=cameraStream;
+    $("#cameraVideo").classList.remove("hidden");
+    $("#cameraFallback").classList.add("hidden");
+    $("#cameraStatus").textContent="Live-Kamera bereit";
+  }catch(e){
+    $("#cameraStatus").textContent="Keine Kamera freigegeben – Windows-Demo ohne Livebild.";
+  }
+}
+
+function stopCamera(){
+  if(cameraStream){cameraStream.getTracks().forEach(t=>t.stop());cameraStream=null;}
+}
+
+function runCountdown(){
+  if(countdownTimer)clearInterval(countdownTimer);
+  let n=3;
+  $("#countdown").textContent=n;
+  $("#countdown").classList.remove("hidden");
+  return new Promise(resolve=>{
+    countdownTimer=setInterval(()=>{
+      n--;
+      if(n<=0){clearInterval(countdownTimer);countdownTimer=null;$("#countdown").classList.add("hidden");resolve();}
+      else $("#countdown").textContent=n;
+    },700);
+  });
+}
+
+async function captureDemoPhoto(){
+  if(!currentEvent)return;
+  $("#captureButton").disabled=true;
+  $("#printStatus").textContent="";
+  $("#operationTitle").textContent="Bereit machen …";
+  await runCountdown();
+  const video=$("#cameraVideo"), canvas=$("#cameraCanvas");
+  if(video.srcObject && video.videoWidth){
+    canvas.width=video.videoWidth;canvas.height=video.videoHeight;
+    const ctx=canvas.getContext("2d");
+    ctx.drawImage(video,0,0,canvas.width,canvas.height);
+    capturedDataUrl=canvas.toDataURL("image/jpeg",0.92);
+  } else {
+    // Keep the demo usable without camera permission.
+    canvas.width=900;canvas.height=600;
+    const ctx=canvas.getContext("2d");
+    ctx.fillStyle="#e9e4d8";ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.fillStyle="#566f52";ctx.font="700 42px Georgia";ctx.textAlign="center";
+    ctx.fillText("FOTOBOX DEMO",canvas.width/2,canvas.height/2-10);
+    ctx.font="24px Arial";ctx.fillStyle="#777";ctx.fillText("Kein Kamerabild verfügbar",canvas.width/2,canvas.height/2+40);
+    capturedDataUrl=canvas.toDataURL("image/jpeg",0.92);
+  }
+  $("#shotPreview").src=capturedDataUrl;
+  $("#shotPreview").classList.remove("hidden");
+  $("#shotEmpty").classList.add("hidden");
+  $("#shotActions").classList.remove("hidden");
+  $("#captureButton").classList.add("hidden");
+  $("#operationTitle").textContent="Foto aufgenommen";
+  $("#cameraStatus").textContent="Vorschau bereit";
+  $("#captureButton").disabled=false;
+}
+
+function resetShot(){
+  capturedDataUrl="";
+  $("#shotPreview").classList.add("hidden");
+  $("#shotEmpty").classList.remove("hidden");
+  $("#shotActions").classList.add("hidden");
+  $("#captureButton").classList.remove("hidden");
+  $("#operationTitle").textContent="Bereit für das nächste Foto";
+  $("#printStatus").textContent="";
+}
+
+$("#startBox").onclick=()=>{
+  if(!currentEvent)return;
+  showOperation();
+};
+$("#captureButton").onclick=captureDemoPhoto;
+$("#retakeButton").onclick=resetShot;
+$("#printButton").onclick=()=>{
+  if(!capturedDataUrl)return;
+  $("#printStatus").textContent="✓ Druckauftrag vorbereitet (Windows-Demo)";
+  $("#operationTitle").textContent="Foto gedruckt – bereit für das nächste Foto";
+};
+$("#backToSetup").onclick=()=>{
+  stopCamera();
+  $("#operationArea").classList.add("hidden");
+  $(".box-header").classList.remove("hidden");
+  $(".steps").classList.remove("hidden");
+  $(".box-main").classList.remove("hidden");
+  $(".box-footer").classList.remove("hidden");
+  $("#startBox").textContent="Fotobox starten →";
+  $("#startBox").disabled=false;
+};
+$("#otherEvent").onclick=()=>{
+  if(timer)clearInterval(timer);
+  eventId=null;lastUpdated="";currentEvent=null;
+  const u=new URL(location.href);u.searchParams.delete("id");history.replaceState({},"",u);
+  $("#setupArea").classList.add("hidden");$("#eventPicker").classList.remove("hidden");
+  $("#boxPinInput").value="";showPinError("");
+  $("#boxTitle").textContent="Warte auf Event-PIN …";
+  $("#boxSubtitle").textContent="Gib die vierstellige PIN aus dem Studio ein.";
+  $("#startBox").classList.add("hidden");
+};
+
+checkApi().then((ok)=>{
+  if(!ok) return;
+  if(eventId){selectEvent(eventId).catch(()=>{});}else{
+    $("#boxTitle").textContent="Warte auf Event-PIN …";
+    $("#boxSubtitle").textContent="Gib die vierstellige PIN aus dem Studio ein.";
+  }
+});
+</script>
+</body>
+</html>

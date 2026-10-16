@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Fotobox Studio 0.9.19</title>
+  <link rel="stylesheet" href="css/studio.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand"><span class="brand-mark">◉</span> Das Studio</div>
+  <div class="topbar-actions">
+    <span id="dbState" class="save-state">Lokale Datenbank</span>
+    <span id="boxState" class="save-state box-state">Fotobox wird geprüft …</span>
+    <button class="top-btn" id="newEventTop">+ Neues Event</button>
+    <button class="top-btn" id="phoneBtn">📱 Smartphone-Demo</button>
+    <button class="top-btn" id="boxBtn">📷 Fotobox-Demo</button>
+    <button class="top-btn dark" id="helpBtn">Hilfe</button>
+  </div>
+</header>
+
+<main class="app">
+  <div id="homeView" class="view active">
+    <section class="home-hero">
+      <div>
+        <p class="eyebrow">FOTOBOX STUDIO · DEMO 0.9.19</p>
+        <h1>Gestalten zu Hause.<br><span>Starten an der Box.</span></h1>
+        <p class="lead">Events werden jetzt lokal gespeichert. Jedes Event bekommt seine eigene ID und PIN und kann später als echte gemeinsame Eventdatei auf die Fotobox übertragen werden.</p>
+        <button class="primary large" id="createFirst">Neues Event anlegen →</button>
+      </div>
+      <div class="home-card">
+        <div class="preview-label">ARCHITEKTUR</div>
+        <div class="architecture">
+          <div class="arch-node main">Eventdatenbank</div>
+          <div class="arch-line"></div>
+          <div class="arch-row">
+            <div class="arch-node">Studio</div>
+            <div class="arch-node">Smartphone</div>
+            <div class="arch-node">Fotobox</div>
+          </div>
+        </div>
+        <p class="muted-note">Windows-Demo: Die Daten bleiben zunächst vollständig auf diesem PC.</p>
+      </div>
+    </section>
+
+    <section class="events-section">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">MEINE EVENTS</p>
+          <h2>Gespeicherte Events</h2>
+        </div>
+        <div class="section-actions">
+          <button class="secondary" id="importJsonBtn">JSON importieren</button>
+          <input id="importInput" type="file" accept="application/json" hidden>
+        </div>
+      </div>
+      <div id="eventList" class="event-list"></div>
+    </section>
+
+    <section class="events-section media-library-section">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">ZENTRALE MEDIEN</p>
+          <h2>Medienbibliothek</h2>
+        </div>
+        <div class="section-actions">
+          <button class="secondary media-tab active" data-media-type="graphics">Grafiken</button>
+          <button class="secondary media-tab" data-media-type="images">Bilder</button>
+          <button class="secondary" id="mediaUploadBtn">＋ Medien hochladen</button>
+          <input id="mediaUploadInput" type="file"
+                 accept="image/png,image/jpeg,image/webp"
+                 multiple hidden>
+        </div>
+      </div>
+
+      <div id="mediaFolderBar" class="media-folderbar"></div>
+
+      <div class="media-library-toolbar">
+        <input id="mediaSearch" type="search" placeholder="Medien suchen …">
+        <span id="mediaLibraryInfo" class="muted-note"></span>
+      </div>
+
+      <div id="mediaLibraryGrid" class="media-library-grid">
+        <div class="empty-state">Medienbibliothek wird geladen …</div>
+      </div>
+    </section>
+
+    <section class="events-section usb-section">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">FOTOBOX</p>
+          <h2>Gast-USB</h2>
+        </div>
+        <div class="section-actions">
+          <button class="secondary" id="refreshGuestUsb">↻ Aktualisieren</button>
+        </div>
+      </div>
+      <p class="usb-intro">USB-Sticks der Fotobox. Vorbereitete Gast-Sticks werden automatisch verwendet. Unbekannte Sticks werden niemals formatiert oder gelöscht.</p>
+      <div id="guestUsbList" class="usb-list">
+        <div class="empty-state">USB-Sticks werden geladen …</div>
+      </div>
+    </section>
+  </div>
+
+  <div id="editorView" class="view">
+    <div class="stepper">
+      <button class="step active" data-step="1"><b>1</b><span>Event</span></button>
+      <div class="step-line"></div>
+      <button class="step" data-step="2"><b>2</b><span>Gestalten</span></button>
+      <div class="step-line"></div>
+      <button class="step" data-step="3"><b>3</b><span>Abschicken</span></button>
+    </div>
+
+    <section id="step1" class="screen active">
+      <div class="hero">
+        <div class="hero-copy">
+          <p class="eyebrow">EVENTDATEN</p>
+          <h1 id="eventHeading">Neues Event</h1>
+          <p class="lead">Diese Angaben gehören später direkt zum Eventobjekt und können von Studio, Smartphone und Fotobox gemeinsam genutzt werden.</p>
+          <div class="hero-card">
+            <label class="field"><span>Eventname</span><input id="eventName"></label>
+            <div class="two-col">
+              <label class="field"><span>Datum</span><input id="eventDate" type="date"></label>
+              <label class="field"><span>Format</span>
+                <div class="format-buttons">
+                  <button class="format-card selected" data-format="landscape"><i class="format-thumb land"></i><span>15 × 10 cm quer</span></button>
+                  <button class="format-card" data-format="portrait"><i class="format-thumb port"></i><span>10 × 15 cm hoch</span></button>
+                </div>
+              </label>
+            </div>
+            <div class="two-col">
+              <label class="field"><span>Ansprechpartner</span><input id="contactName"></label>
+              <label class="field"><span>E-Mail</span><input id="contactEmail" type="email"></label>
+            </div>
+            <div class="event-id-row">
+              <span>Event-ID</span><code id="eventId"></code>
+              <span>PIN</span><strong id="eventPin"></strong>
+              <button class="secondary" id="copyPin">PIN kopieren</button>
+            </div>
+            <button class="primary large" id="toDesign">Weiter zum Editor →</button>
+          </div>
+        </div>
+        <aside class="event-preview-panel">
+          <div class="preview-label">VORSCHAU</div>
+          <div id="eventPreview" class="poster-preview"></div>
+          <div class="preview-meta">
+            <strong id="metaName"></strong>
+            <span id="metaDate"></span>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <section id="step2" class="screen">
+      <div class="editor">
+        <aside class="left-panel">
+          <div class="panel-title">GESTALTEN</div>
+          <div class="tool-tabs">
+            <button class="tool-tab active" data-tool="layout">Layout</button>
+            <button class="tool-tab" data-tool="background">Hintergrund</button>
+            <button class="tool-tab" data-tool="frame">Rahmen</button>
+            <button class="tool-tab" data-tool="text">Text</button>
+            <button class="tool-tab" data-tool="images">Bilder</button>
+            <button class="tool-tab" data-tool="graphics">Grafiken</button>
+            <button class="tool-tab" data-tool="permissions">Freigaben</button>
+          </div>
+          <div id="toolContent"></div>
+        </aside>
+
+        <section class="workspace">
+          <div class="workspace-head">
+            <div>
+              <div class="eyebrow">LIVE-VORSCHAU</div>
+              <h2 id="canvasTitle"></h2>
+            </div>
+            <div class="zoom-controls">
+              <button id="zoomOut">−</button>
+              <span id="zoomValue">64 %</span>
+              <button id="zoomIn">+</button>
+            </div>
+          </div>
+          <div class="canvas-shell"><div id="canvasStage" class="canvas-stage landscape"></div></div>
+          <div class="hint-bar">Der Eventzustand wird automatisch lokal gespeichert.</div>
+        </section>
+
+        <aside class="right-panel">
+          <div class="panel-title">EINSTELLUNGEN</div>
+          <div id="inspector"></div>
+          <button class="primary full" id="toSubmit">Vorschau & abschicken →</button>
+        </aside>
+      </div>
+    </section>
+
+    <section id="step3" class="screen">
+      <div class="submit-page">
+        <div>
+          <p class="eyebrow">VORSCHAU & ABSCHICKEN</p>
+          <h2 id="submitTitle">Event prüfen und für die Box freigeben</h2>
+          <p class="lead">Hier siehst du den gespeicherten Stand. Mit „Event an Fotobox übertragen“ wird das Event auf dem Raspberry Pi gespeichert, freigegeben und anschließend lokal als übertragen markiert.</p>
+          <div class="submit-summary" id="submitSummary"></div>
+          <div class="pin-card">
+            <div>
+              <div class="pin-label">PIN FÜR DIE FOTOBOX</div>
+              <div id="submitPin" class="pin"></div>
+              <div class="pin-hint">Event-ID: <span id="submitEventId"></span></div>
+            </div>
+            <img class="submit-qr" src="resources_qr_setup.png" alt="QR-Code für Smartphone-Setup">
+          </div>
+          <div class="submit-actions">
+            <button class="primary large" id="approveEvent">✓ Event für Fotobox freigeben</button>
+            <button class="secondary large" id="exportJson">Event als JSON exportieren</button>
+            <button class="secondary large" id="openPhoneFromSubmit">📱 Smartphone-Setup</button>
+            <button class="secondary large" id="deactivateEvent" style="margin-top:12px;">■ Event beenden</button>
+          </div>
+          <div id="sendResult" class="send-result hidden"></div>
+        </div>
+        <div class="final-preview-card">
+          <div class="preview-head">
+            <div class="preview-label">DRUCKVORSCHAU</div>
+            <span id="previewFormat" class="preview-badge"></span>
+          </div>
+          <div class="preview-stage-wrap"><div id="finalPreview" class="final-preview"></div></div>
+          <div class="preview-info" id="previewInfo"></div>
+          <div class="final-actions">
+            <button class="secondary" id="backToEditor">← Zurück zum Editor</button>
+            <button class="secondary" id="goHome">Meine Events</button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+</main>
+
+<div id="phoneOverlay" class="phone-overlay hidden">
+  <div class="phone-demo">
+    <div class="phone-head"><strong>Fotobox Setup</strong><button id="closePhone">×</button></div>
+    <div class="phone-screen">
+      <div class="phone-status"><span>9:41</span><span>● ● ●</span></div>
+      <div class="phone-event" id="phoneEvent"></div>
+      <div class="phone-step" id="phoneStepLabel"></div>
+      <div class="phone-title" id="phoneTitle"></div>
+      <p class="phone-help">Diese Ansicht verwendet direkt die Daten des aktuell geöffneten Events.</p>
+      <div class="phone-progress" id="phoneProgress"></div>
+      <div class="phone-mobile-preview-wrap">
+        <div class="phone-mobile-preview-label">LIVE-VORSCHAU</div>
+        <div id="phoneMobilePreview" class="phone-box-preview phone-mobile-preview"></div>
+      </div>
+      <div id="phoneContent"></div>
+    </div>
+  </div>
+  <div class="phone-live-panel">
+    <div class="panel-title">FOTObOX-SIMULATION</div>
+    <p>Die große Vorschau nutzt denselben Eventzustand.</p>
+    <div id="phoneBoxPreview" class="phone-box-preview"></div>
+    <div class="phone-live-status"><span class="live-dot"></span><span id="liveStatus">Live synchronisiert</span></div>
+  </div>
+</div>
+
+<dialog id="helpDialog">
+  <h3>Fotobox Studio 0.9.19</h3>
+  <p>Neu sind die lokale Eventverwaltung, Event-ID, PIN, Eventliste, JSON-Export/-Import, die Gast-USB-Anbindung und die Event-Übertragung an die Fotobox. Die Vorbereitung eines Gast-Sticks legt ausschließlich die benötigte Fotobox-Struktur an und formatiert oder löscht keine vorhandenen Dateien.</p>
+  <button class="primary" id="closeHelp">Schließen</button>
+</dialog>
+
+<script src="shared/event-schema.js?v=0.9.20"></script>
+<script src="shared/renderer.js?v=0.9.20"></script>
+<script src="js/studio.js?v=0.9.20"></script>
+</body>
+</html>

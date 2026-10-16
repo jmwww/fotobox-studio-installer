@@ -1,0 +1,21 @@
+Fotobox Studio 0.9.20
+
+NEU: Touch-Layout-Editor auf setup.html
+
+- Im Schritt „Layout“ gibt es „Layout direkt bearbeiten“.
+- Foto-Slots können per Finger verschoben und über den goldenen Griff in der Größe verändert werden.
+- Grafiken können verschoben, skaliert und gedreht werden.
+- Der Text kann verschoben, skaliert und gedreht werden.
+- Änderungen werden nach dem Loslassen des Fingers über die bestehende Live-API gespeichert.
+- Der vorhandene gemeinsame FotoboxRenderer bleibt die Darstellungsgrundlage.
+- Pointer Events und Pointer Capture werden für Maus/Touch verwendet.
+- Cache-Versionen auf 0.9.20 erhöht.
+
+Bedienung am Handy:
+1. Event per PIN öffnen.
+2. Schritt „Layout“ öffnen.
+3. „Layout direkt bearbeiten“ antippen.
+4. Element antippen und ziehen.
+5. Goldener Griff = Größe.
+6. Grüner Griff = Drehung.
+7. Nach dem Loslassen wird automatisch gespeichert.

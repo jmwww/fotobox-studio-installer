@@ -1,0 +1,966 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Fotobox Setup</title>
+<link rel="stylesheet" href="css/setup.css?v=20261006-box7">
+</head>
+<body>
+<main id="setupMain" class="phone">
+  <header class="phone-head">
+    <div>
+      <div id="setupEyebrow" class="eyebrow">MIT DEM HANDY EINRICHTEN</div>
+      <div class="event-name" id="eventName">Event auswählen</div>
+    </div>
+    <div class="studio-head-actions">
+      <span id="syncDot" class="sync-dot"></span>
+      <button id="studioExitButton" type="button" class="studio-exit-button">STUDIO BEENDEN</button>
+    </div>
+  </header>
+
+  <section class="phone-body">
+    <div id="pinGate" class="pin-gate">
+      <div class="step-label">FOTOBOX VERBINDEN</div>
+      <h1>Event öffnen</h1>
+      <p>Gib die vierstellige PIN ein.</p>
+
+      <input id="pinInput" type="hidden" value="">
+
+      <div id="pinDisplay" class="pin-display" aria-label="PIN">
+        <span></span><span></span><span></span><span></span>
+      </div>
+
+      <div id="pinPad" class="pin-pad">
+        <button type="button" data-pin="1">1</button>
+        <button type="button" data-pin="2">2</button>
+        <button type="button" data-pin="3">3</button>
+        <button type="button" data-pin="4">4</button>
+        <button type="button" data-pin="5">5</button>
+        <button type="button" data-pin="6">6</button>
+        <button type="button" data-pin="7">7</button>
+        <button type="button" data-pin="8">8</button>
+        <button type="button" data-pin="9">9</button>
+        <button type="button" data-pin="clear">C</button>
+        <button type="button" data-pin="0">0</button>
+        <button type="button" data-pin="back">←</button>
+      </div>
+
+      <button id="pinOpen" class="primary">Event öffnen →</button>
+      <div id="pinError" class="pin-error"></div>
+    </div>
+
+    <div id="setupContent" class="hidden">
+      <div class="step-label" id="stepLabel">1 / 7</div>
+      <h1 id="title">Layout wählen</h1>
+      <p id="hint">Die Box übernimmt jede Änderung sofort.</p>
+      <div class="progress" id="progress"></div>
+
+      <div class="phone-preview-wrap">
+        <div class="preview-caption">LIVE-VORSCHAU</div>
+        <div id="phonePreview" class="phone-preview"></div>
+      </div>
+
+      <div id="content"></div>
+    </div>
+  </section>
+</main>
+
+<script src="shared/event-schema.js?v=0.9.20"></script>
+<script src="shared/renderer.js?v=0.9.20"></script>
+<script src="/resources/js/virtualKeyboard.js?v=20261008"></script>
+<script>
+const $=q=>document.querySelector(q);
+
+document.getElementById("studioExitButton").onclick = function () {
+  window.location.href = "/";
+};
+const boxMode = new URLSearchParams(location.search).get("source") === "box";
+let eventId=boxMode ? null : new URLSearchParams(location.search).get("id");
+if (boxMode) {
+  document.getElementById("setupMain").classList.add("box-mode");
+  document.getElementById("setupMain").classList.add("box-pin-mode");
+  document.getElementById("setupEyebrow").textContent = "STUDIO – DIREKT AN DER FOTOBOX";
+}
+let eventData=null,step=1,last="",timer=null,editMode=false,editState=null;
+const titles=["Layout","Hintergrund","Text","Schrift","Stil","Cheese","Drucker"];
+const colors=["#d9edc8","#eddba4","#eec6cd","#cbd9ec","#e4d0b9","#d9c7eb"];
+
+const FOTOBOX_HOSTS = new Set(["localhost","127.0.0.1","192.168.0.101","192.168.178.254"]);
+const FOTOBOX_BASE = FOTOBOX_HOSTS.has(location.hostname)
+  ? location.origin
+  : "http://192.168.178.254";
+
+async function api(url, options={}){
+  const r=await fetch(url,{...options,cache:"no-store",headers:{"Accept":"application/json",...(options.headers||{})}});
+  const j=await r.json();
+  if(!r.ok||!j.ok)throw new Error(j.error||`HTTP ${r.status}`);
+  return j;
+}
+function esc(v){return String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}
+async function findByPin(pin){
+  const r=await fetch(
+    `${FOTOBOX_BASE}/studio/api/events.php?action=list`,
+    {cache:"no-store",headers:{"Accept":"application/json"}}
+  );
+  const j=await r.json();
+  if(!r.ok||!j.ok)throw new Error(j.error||`HTTP ${r.status}`);
+  return (j.events||[]).find(e=>String(e.pin||"")===String(pin));
+}
+
+async function openEvent(){
+  const pin=$("#pinInput").value.replace(/\D/g,"").slice(0,4);
+  $("#pinInput").value=pin; $("#pinError").textContent="";
+  if(pin.length!==4){$("#pinError").textContent="Bitte genau 4 Ziffern eingeben.";return}
+  try{
+    const ev=await findByPin(pin);
+    if(!ev){
+      $("#pinInput").value="";
+      document.querySelectorAll("#pinDisplay span").forEach(dot=>{
+        dot.classList.remove("filled");
+      });
+      $("#pinError").textContent="PIN FALSCH";
+      $("#pinError").classList.add("pin-error-large");
+      return;
+    }
+
+    const activate=await fetch(
+      `${FOTOBOX_BASE}/api/studio-events.php?action=activate&pin=${encodeURIComponent(pin)}`,
+      {
+        method:"POST",
+        cache:"no-store",
+        headers:{"Accept":"application/json"}
+      }
+    );
+
+    const activateData=await activate.json();
+
+    if(!activate.ok || !activateData.ok || !activateData.activated){
+      throw new Error(activateData.error || `HTTP ${activate.status}`);
+    }
+
+    eventId=ev.id;
+    const u=new URL(location.href);u.searchParams.set("id",eventId);history.replaceState({},"",u);
+    $("#pinGate").classList.add("hidden");$("#setupContent").classList.remove("hidden");
+    await load();startPolling();
+  }catch(e){
+    console.error("Studio-Event-Aktivierung:",e);
+    $("#pinError").textContent="Event konnte nicht aktiviert werden.";
+  }
+}
+async function load(){
+  if(!eventId)return;
+  try{
+    const status=await fetch(`${FOTOBOX_BASE}/studio/api/live.php?id=${encodeURIComponent(eventId)}&status=1`,{cache:"no-store",headers:{"Accept":"application/json"}}).then(async r=>{const data=await r.json();if(!r.ok||!data.ok)throw new Error(data.error||`HTTP ${r.status}`);return data;});
+
+    if(status.updatedAt!==last){
+      const j=await fetch(`${FOTOBOX_BASE}/studio/api/live.php?id=${encodeURIComponent(eventId)}`,{cache:"no-store",headers:{"Accept":"application/json"}}).then(async r=>{const data=await r.json();if(!r.ok||!data.ok)throw new Error(data.error||`HTTP ${r.status}`);return data;});
+      const incoming=FotoboxEventSchema.normalize(j.event);
+      eventData=incoming;
+      last=incoming.updatedAt;
+      if(!editMode)render();
+    }
+
+    if(eventData)$("#eventName").textContent=eventData.name||"Dein Event";
+    $("#syncDot").className="sync-dot live";
+  }catch(e){$("#syncDot").className="sync-dot bad"}
+}
+function startPolling(){if(timer)clearInterval(timer);timer=setInterval(load,500)}
+function setStep(n){step=Math.max(1,Math.min(7,n));render()}
+function updateStepOnEvent(){patch({design:{setupStep:step}})}
+async function render(){
+  if(!eventData)return;
+
+  const renderForStep=step;
+
+  // In Schritt 6 sollen vorhandene Grafiken sofort bearbeitbar sein.
+  // Beim Verlassen des Schritts wird der direkte Bearbeitungsmodus beendet.
+  if(step===6){
+    editMode=true;
+  }else if(step!==1 && editMode){
+    editMode=false;
+    editState=null;
+  }
+
+  const d=eventData.design||{};
+  $("#stepLabel").textContent=`${step} / 7 · ${titles[step-1]}`;
+  $("#title").textContent=`${titles[step-1]} wählen`;
+  $("#hint").textContent=step===3?"Text direkt eingeben – die Box zeigt ihn live.":step===4?"Schrift, Größe und Drehung lassen sich direkt einstellen.":"Die Box übernimmt deine Auswahl live.";
+  $("#progress").innerHTML=titles.map((_,i)=>`<span class="${i+1<=step?"active":""}"></span>`).join("");
+  renderPreview();
+  const c=$("#content");
+
+  if(step===1){
+    c.innerHTML=`<div class="grid2">${[1,2,3,4].map(n=>`<button class="card ${d.layout?.slots?.length===n?"active":""}" data-layout="${n}"><div class="sample layout"><span>${n}</span></div><span>${n} Bild${n>1?"er":""}</span></button>`).join("")}</div>
+      <button type="button" class="secondary layout-edit-toggle" id="layoutEditToggle">${editMode?"✓ Layout bearbeiten beenden":"✋ Layout direkt bearbeiten"}</button>
+      <button type="button" class="secondary layout-remove-graphic" id="removeSelectedLayoutGraphic" disabled>Grafik aus Layout entfernen</button>
+      <div class="layout-edit-help ${editMode?"":"hidden"}">Element antippen und ziehen. An den goldenen Griffen kannst du die Größe ändern; am grünen Griff drehen.</div>
+  `;
+    document.querySelectorAll("[data-layout]").forEach(b=>b.onclick=async()=>{editMode=false;await patch({design:{layout:makeLayout(+b.dataset.layout),slots:makeSlots(+b.dataset.layout),setupStep:1}})});
+    $("#layoutEditToggle").onclick=()=>{
+      editMode=!editMode;
+      editState=null;
+      render();
+    };
+
+    $("#removeSelectedLayoutGraphic").onclick=async()=>{
+      const selected=$("#phonePreview .layout-editor-object.selected");
+
+      if(!selected || selected.dataset.editorType!=="graphic"){
+        return;
+      }
+
+      const id=selected.dataset.editorId;
+      if(!id)return;
+
+      const graphics=(eventData.design?.graphics||[])
+        .filter(graphic=>graphic.id!==id);
+
+      editState=null;
+
+      await patch({
+        design:{
+          graphics,
+          setupStep:1
+        }
+      });
+
+      editState=null;
+      render();
+    };
+  }else if(step===2){
+    c.innerHTML=`<div class="grid2">${colors.map(col=>`<button class="card ${d.background?.value===col?"active":""}" data-bg="${col}"><div class="sample" style="background:${col}"></div><span>Hintergrund</span></button>`).join("")}</div>`;
+    document.querySelectorAll("[data-bg]").forEach(b=>b.onclick=()=>patch({design:{background:{type:"color",value:b.dataset.bg},setupStep:2}}));
+  }else if(step===3){
+    c.innerHTML=`
+      <label class="field">
+        <span>Text</span>
+        <textarea id="text" class="textarea" maxlength="80" placeholder="z. B. Lena & Jonas">${esc(d.text?.content||"")}</textarea>
+      </label>
+
+      <button id="applyText" class="primary">Text übernehmen</button>
+
+      <div id="studioKeyboardWrap" class="studio-keyboard-wrap hidden">
+        <div class="studio-keyboard-head">
+          <strong>Text eingeben</strong>
+          <button type="button" id="studioKeyboardClose" class="studio-keyboard-close">
+            Tastatur schließen
+          </button>
+        </div>
+
+        <div id="studioKeyboardContainer"></div>
+      </div>
+    `;
+
+    const textField = $("#text");
+    const keyboardWrap = $("#studioKeyboardWrap");
+
+    virtualKeyboard.initialize(
+      "qwertz",
+      "#text",
+      "#studioKeyboardContainer",
+      {studioMode:true}
+    );
+
+    const openStudioKeyboard = () => {
+      keyboardWrap.classList.remove("hidden");
+    };
+
+    const closeStudioKeyboard = () => {
+      keyboardWrap.classList.add("hidden");
+      textField.blur();
+    };
+
+    textField.addEventListener("focus", openStudioKeyboard);
+    textField.addEventListener("click", openStudioKeyboard);
+
+    $("#studioKeyboardClose").onclick = closeStudioKeyboard;
+
+    $("#applyText").onclick = async () => {
+      closeStudioKeyboard();
+
+      await patch({
+        design:{
+          text:{
+            ...d.text,
+            content:textField.value
+          },
+          setupStep:3
+        }
+      });
+    };
+  }else if(step===4){
+    c.innerHTML=`<div class="list">
+      ${["Fraunces","Georgia","Arial"].map(font=>`<button class="choice ${d.text?.fontFamily===font?"active":""}" data-font="${font}">${font}</button>`).join("")}
+    </div>
+    <div class="control-card"><label>Schriftgröße <output id="sizeOut">${d.text?.fontSize||31}px</output></label><input id="fontSize" type="range" min="18" max="72" value="${d.text?.fontSize||31}"></div>
+    <div class="control-card"><label>Drehung <output id="rotOut">${d.text?.rotation||0}°</output></label><input id="rotation" type="range" min="-180" max="180" value="${d.text?.rotation||0}"></div>`;
+    document.querySelectorAll("[data-font]").forEach(b=>b.onclick=()=>patch({design:{text:{...d.text,fontFamily:b.dataset.font},setupStep:4}}));
+    $("#fontSize").oninput=()=>{$("#sizeOut").value=$("#fontSize").value+"px";patch({design:{text:{...d.text,fontSize:Number($("#fontSize").value)},setupStep:4}})};
+    $("#rotation").oninput=()=>{$("#rotOut").value=$("#rotation").value+"°";patch({design:{text:{...d.text,rotation:Number($("#rotation").value)},setupStep:4}})};
+  }else if(step===5){
+    const frames=[{id:"thin",label:"Feine Linie",value:"#ffffff"},{id:"gold",label:"Gold",value:"#d0aa4e"},{id:"dark",label:"Dunkel",value:"#23241f"},{id:"none",label:"Kein Rahmen",value:""}];
+    c.innerHTML=`<div class="list">${frames.map(f=>`<button class="choice ${((d.frame?.type||"thin")===f.id)?"active":""}" data-frame="${f.id}" data-frame-value="${f.value}">${f.label}</button>`).join("")}</div><div class="control-card"><label>Textfarbe</label><div class="color-row">${["#d0aa4e","#23241f","#ffffff","#7e354d"].map(col=>`<button class="color-btn ${d.text?.color===col?"active":""}" style="background:${col}" data-text-color="${col}"></button>`).join("")}</div></div>`;
+    document.querySelectorAll("[data-frame]").forEach(b=>b.onclick=()=>patch({design:{frame:{type:b.dataset.frame,value:b.dataset.frameValue},setupStep:5}}));
+    document.querySelectorAll("[data-text-color]").forEach(b=>b.onclick=()=>patch({design:{text:{...d.text,color:b.dataset.textColor},setupStep:5}}));
+  }else if(step===6){
+    const currentGraphics=d.graphics||[];
+    const permissions=eventData.mediaPermissions||{};
+    const allowedIds=new Set(
+      (permissions.graphics||[]).map(String)
+    );
+
+    let library=[];
+
+    try{
+      const response=await fetch(`${FOTOBOX_BASE}/studio/api/media.php`,{
+        cache:"no-store",
+        headers:{"Accept":"application/json"}
+      });
+
+      const data=await response.json();
+
+      if(response.ok && data.ok && Array.isArray(data.assets)){
+        library=data.assets.filter(asset =>
+          asset.type==="graphic" &&
+          allowedIds.has(String(asset.id))
+        );
+      }
+    }catch(e){
+      console.error(
+        "Freigegebene Grafiken konnten nicht geladen werden:",
+        e
+      );
+    }
+
+    // Ein inzwischen überholter Schritt-6-Render darf
+    // einen neueren Schritt nicht mehr überschreiben.
+    if(step!==renderForStep){
+      return;
+    }
+
+    const cards=library.map(asset=>`
+      <button
+        type="button"
+        class="card"
+        data-graphic-asset="${esc(asset.id)}">
+        <div class="cheese-sample">
+          <img
+            src="${esc(asset.url)}"
+            alt="${esc(asset.name||"Grafik")}">
+        </div>
+        <span>${esc(asset.name||"Grafik")}</span>
+      </button>
+    `).join("");
+
+    c.innerHTML=`
+      <div class="grid2">
+        ${cards || `
+          <div class="empty-state">
+            Für dieses Event sind noch keine Grafiken freigegeben.
+            <br><br>
+            Die Freigaben werden im PC-Studio unter
+            <strong>Freigaben</strong> festgelegt.
+          </div>
+        `}
+      </div>
+
+      <div class="layout-edit-help">
+        Freigegebene Grafik auswählen und anschließend direkt im
+        Layout verschieben, vergrößern oder drehen.
+      </div>
+
+      <button
+        type="button"
+        class="secondary layout-remove-graphic"
+        id="removeSelectedStep6Graphic"
+        disabled>
+        Grafik aus Design entfernen
+      </button>
+    `;
+
+    document.querySelectorAll("[data-graphic-asset]").forEach(button=>{
+      button.onclick=async()=>{
+        const asset=library.find(
+          item=>String(item.id)===String(button.dataset.graphicAsset)
+        );
+
+        if(!asset)return;
+
+        const graphic={
+          id:`graphic-${Date.now()}-${Math.random()
+            .toString(36).slice(2,8)}`,
+          name:asset.name,
+          src:asset.url,
+          assetId:asset.id,
+          assetFile:asset.file,
+          assetUrl:asset.url,
+          x:50,
+          y:50,
+          width:20,
+          rotation:0,
+          opacity:1
+        };
+
+        const graphics=[
+          ...currentGraphics,
+          graphic
+        ];
+
+        editMode=true;
+
+        await patch({
+          design:{
+            graphics,
+            cheese:{
+              enabled:false,
+              assetId:null
+            },
+            setupStep:6
+          }
+        });
+
+        render();
+
+        requestAnimationFrame(()=>{
+          const el=[
+            ...document.querySelectorAll(
+              "#phonePreview .layout-editor-object"
+            )
+          ].find(x=>
+            x.dataset.editorType==="graphic" &&
+            x.dataset.editorId===graphic.id
+          );
+
+          if(el)previewSelect(el);
+        });
+      };
+    });
+
+    $("#removeSelectedStep6Graphic").onclick=async()=>{
+      const selected=$("#phonePreview .layout-editor-object.selected");
+
+      if(!selected || selected.dataset.editorType!=="graphic"){
+        return;
+      }
+
+      const id=selected.dataset.editorId;
+      if(!id)return;
+
+      const graphics=(eventData.design?.graphics||[])
+        .filter(graphic=>graphic.id!==id);
+
+      await patch({
+        design:{
+          graphics,
+          setupStep:6
+        }
+      });
+
+      editState=null;
+      render();
+    };
+  }else{
+    const p=d.printer||{};
+
+    c.innerHTML=`<div class="check">🖨 <strong>SELPHY CP1500</strong> · Bereit</div><div class="control-card"><label class="switch-row"><span>Automatisch drucken</span><input id="printEnabled" type="checkbox" ${p.enabled!==false?"checked":""}></label></div><div class="control-card"><label>Exemplare <output id="copiesOut">${p.copies||1}</output></label><input id="copies" type="range" min="1" max="3" value="${p.copies||1}"></div>`;
+    $("#printEnabled").onchange=()=>patch({design:{printer:{...p,enabled:$("#printEnabled").checked},setupStep:7}});
+    $("#copies").oninput=()=>{$("#copiesOut").value=$("#copies").value;patch({design:{printer:{...p,copies:Number($("#copies").value)},setupStep:7}})};
+  }
+  const nav=document.createElement("div");nav.className="nav";nav.innerHTML=`<button class="secondary" id="prev" ${step===1?"disabled":""}>Zurück</button><button class="primary" id="next">${step===7?"Fertig":"Weiter →"}</button>`;c.appendChild(nav);
+  $("#prev").onclick=()=>setStep(step-1);
+  $("#next").onclick=async()=>{
+    await pendingEditSave;
+
+    if(step<7){
+      step++;
+      await patch({design:{setupStep:step}});
+      render();
+    }else{
+      await patch({
+        status:"ready",
+        design:{setupStep:7}
+      });
+      $("#title").textContent="Setup abgeschlossen";
+      $("#hint").textContent="Das Event ist jetzt bereit für die Fotobox.";
+      $("#next").textContent="Fertig ✓";
+    }
+  };
+}
+function renderPreview(){
+  if(!eventData)return;
+  const preview=$("#phonePreview");
+  preview.classList.toggle("portrait", eventData.format === "portrait");
+  preview.classList.toggle("landscape", eventData.format !== "portrait");
+  FotoboxRenderer.renderToElement(preview,eventData,{showPlaceholders:true});
+  if(editMode) attachLayoutEditor(preview);
+}
+
+function clamp(v,min,max){return Math.max(min,Math.min(max,v))}
+
+const BOX_FRAME_BOUNDS = {
+  left: 5.5556,
+  top: 4.1667,
+  right: 94.4444,
+  bottom: 95.8333
+};
+
+function attachLayoutEditor(preview){
+  preview.classList.add("layout-editing");
+  const d=eventData.design||{};
+  preview.querySelectorAll(".shared-render-slot").forEach((el,index)=>{
+    const slotId=el.dataset.slotId;
+    const slot=(d.layout?.slots||[]).find(x=>x.id===slotId);
+    if(!slot)return;
+    makeEditorObject(el,"slot",slotId,slot);
+
+    const resize=document.createElement("div");
+    resize.className="layout-resize-handle";
+    el.appendChild(resize);
+
+    const rotate=document.createElement("div");
+    rotate.className="layout-rotate-handle";
+    el.appendChild(rotate);
+
+    resize.addEventListener(
+      "pointerdown",
+      e=>startLayoutResize(e,el,"slot",slotId)
+    );
+
+    rotate.addEventListener(
+      "pointerdown",
+      e=>startLayoutRotate(e,el,"slot",slotId)
+    );
+  });
+  preview.querySelectorAll(".shared-render-graphic").forEach(el=>{
+    const id=el.dataset.graphicId; const graphic=(d.graphics||[]).find(x=>x.id===id);
+    if(!graphic)return;
+    makeEditorObject(el,"graphic",id,graphic);
+    const resize=document.createElement("div"); resize.className="layout-resize-handle"; el.appendChild(resize);
+    const rotate=document.createElement("div"); rotate.className="layout-rotate-handle"; el.appendChild(rotate);
+    resize.addEventListener("pointerdown",e=>startLayoutResize(e,el,"graphic",id));
+    rotate.addEventListener("pointerdown",e=>startLayoutRotate(e,el,"graphic",id));
+  });
+  const textEl=preview.querySelector(".shared-render-text");
+  if(textEl){
+    makeEditorObject(textEl,"text","text",d.text||{});
+
+    // Beim Öffnen des Layout-Editors sofort die natürliche
+    // Textbreite übernehmen. Der Rahmen darf nicht zunächst
+    // die 80-%-Breite des gemeinsamen Renderers verwenden.
+    applyEditorPosition(textEl,"text",d.text||{});
+
+    const resize=document.createElement("div"); resize.className="layout-resize-handle"; textEl.appendChild(resize);
+    const rotate=document.createElement("div"); rotate.className="layout-rotate-handle"; textEl.appendChild(rotate);
+    resize.addEventListener("pointerdown",e=>startLayoutResize(e,textEl,"text","text"));
+    rotate.addEventListener("pointerdown",e=>startLayoutRotate(e,textEl,"text","text"));
+  }
+}
+
+function makeEditorObject(el,type,id,obj){
+  el.classList.add("layout-editor-object");
+  el.dataset.editorType=type; el.dataset.editorId=id;
+  el.addEventListener("pointerdown",e=>{
+    if(e.target.classList.contains("layout-resize-handle")||e.target.classList.contains("layout-rotate-handle"))return;
+    e.preventDefault(); e.stopPropagation();
+    previewSelect(el); startLayoutDrag(e,el,type,id);
+  });
+}
+
+function previewSelect(el){
+  document.querySelectorAll("#phonePreview .layout-editor-object.selected").forEach(x=>x.classList.remove("selected"));
+  el.classList.add("selected");
+
+  const removeButtons=[
+    $("#removeSelectedLayoutGraphic"),
+    $("#removeSelectedStep6Graphic")
+  ].filter(Boolean);
+
+  removeButtons.forEach(button=>{
+    button.disabled=el.dataset.editorType!=="graphic";
+  });
+}
+
+function getEditableObject(type,id){
+  const d=eventData.design||{};
+  if(type==="slot") return (d.layout?.slots||[]).find(x=>x.id===id);
+  if(type==="graphic") return (d.graphics||[]).find(x=>x.id===id);
+  return d.text;
+}
+
+let pendingEditSave = Promise.resolve();
+
+function startLayoutDrag(e,el,type,id){
+  const obj=getEditableObject(type,id); if(!obj)return;
+  const preview=$("#phonePreview"), rect=preview.getBoundingClientRect();
+  const startX=e.clientX,startY=e.clientY;
+  const x0=Number(obj.x??50), y0=Number(obj.y??50);
+  el.setPointerCapture?.(e.pointerId);
+  function move(ev){
+    const dx=(ev.clientX-startX)/rect.width*100;
+    const dy=(ev.clientY-startY)/rect.height*100;
+
+    let nextX=x0+dx;
+    let nextY=y0+dy;
+
+    const bounds=BOX_FRAME_BOUNDS;
+
+    if(type==="slot"){
+      const width=Number(obj.width??10);
+      const height=Number(obj.height??10);
+
+      nextX=clamp(
+        nextX,
+        bounds.left,
+        bounds.right-width
+      );
+
+      nextY=clamp(
+        nextY,
+        bounds.top,
+        bounds.bottom-height
+      );
+    }
+
+    else if(type==="graphic"){
+      const box=el.getBoundingClientRect();
+
+      const halfW=
+        box.width/(2*rect.width)*100;
+
+      const halfH=
+        box.height/(2*rect.height)*100;
+
+      nextX=clamp(
+        nextX,
+        bounds.left+halfW,
+        bounds.right-halfW
+      );
+
+      nextY=clamp(
+        nextY,
+        bounds.top+halfH,
+        bounds.bottom-halfH
+      );
+    }
+
+    else if(type==="text"){
+      const box=el.getBoundingClientRect();
+
+      // X: tatsächliche sichtbare Breite berücksichtigen.
+      const halfW =
+        box.width / (2 * rect.width) * 100;
+
+      nextX=clamp(
+        nextX,
+        bounds.left + halfW,
+        bounds.right - halfW
+      );
+
+      // Y: obj.y beschreibt die untere Position des Textes.
+      // Deshalb die tatsächliche Verschiebung des sichtbaren
+      // Textes innerhalb des Rahmenbereichs begrenzen.
+      const frameTopPx =
+        rect.top + rect.height * bounds.top / 100;
+
+      const frameBottomPx =
+        rect.top + rect.height * bounds.bottom / 100;
+
+      const requestedDyPx =
+        dy * rect.height / 100;
+
+      const minDyPx =
+        frameTopPx - box.top;
+
+      const maxDyPx =
+        frameBottomPx - box.bottom;
+
+      const allowedDyPx =
+        clamp(
+          requestedDyPx,
+          minDyPx,
+          maxDyPx
+        );
+
+      nextY =
+        y0 +
+        allowedDyPx / rect.height * 100;
+    }
+
+    obj.x=nextX;
+    obj.y=nextY;
+
+    applyEditorPosition(el,type,obj);
+  }
+  function end(){
+    el.removeEventListener("pointermove",move); el.removeEventListener("pointerup",end); el.removeEventListener("pointercancel",end);
+    pendingEditSave = saveEditedObject(type,id);
+  }
+  el.addEventListener("pointermove",move); el.addEventListener("pointerup",end); el.addEventListener("pointercancel",end);
+}
+
+function startLayoutResize(e,el,type,id){
+  e.preventDefault();
+  e.stopPropagation();
+
+  const obj=getEditableObject(type,id);
+  if(!obj)return;
+
+  const preview=$("#phonePreview");
+  const previewRect=preview.getBoundingClientRect();
+  const elementRect=el.getBoundingClientRect();
+
+  const handle=e.currentTarget;
+  handle.setPointerCapture?.(e.pointerId);
+
+  /*
+   * Beim Foto-Slot sind x/y die obere linke Ecke.
+   * Der obere linke Punkt wird beim Resize eingefroren.
+   * Die Mausposition definiert direkt die rechte/untere Kante.
+   */
+  const fixedLeft=elementRect.left;
+  const fixedTop=elementRect.top;
+
+  const startPointerX=e.clientX;
+
+  const startWidthPercent=
+    Number(obj.width ?? elementRect.width/previewRect.width*100);
+
+  const startHeightPercent=
+    Number(obj.height ?? elementRect.height/previewRect.height*100);
+
+  function move(ev){
+    if(type==="slot"){
+      const widthPercent=
+        (ev.clientX-fixedLeft)/previewRect.width*100;
+
+      const heightPercent=
+        (ev.clientY-fixedTop)/previewRect.height*100;
+
+      const leftPercent=Number(obj.x??0);
+      const topPercent=Number(obj.y??0);
+
+      obj.width=clamp(
+        widthPercent,
+        8,
+        Math.max(
+          8,
+          BOX_FRAME_BOUNDS.right-leftPercent
+        )
+      );
+
+      obj.height=clamp(
+        heightPercent,
+        8,
+        Math.max(
+          8,
+          BOX_FRAME_BOUNDS.bottom-topPercent
+        )
+      );
+
+      applyEditorPosition(el,type,obj);
+      return;
+    }
+
+    /*
+     * Grafik und Text behalten die bisherige Bearbeitung.
+     */
+    const delta=
+      (ev.clientX-startPointerX)/previewRect.width*100;
+
+    if(type==="graphic"){
+      const centerX=Number(obj.x??50);
+
+      const maxHalfWidth=Math.min(
+        centerX-BOX_FRAME_BOUNDS.left,
+        BOX_FRAME_BOUNDS.right-centerX
+      );
+
+      obj.width=clamp(
+        startWidthPercent+delta,
+        3,
+        Math.max(3,maxHalfWidth*2)
+      );
+
+    }else if(type==="text"){
+      const startScale=Number(obj.scale??1);
+
+      // Der Resize-Griff verändert beim Text die tatsächliche
+      // Schriftgröße/Skalierung und nicht mehr die Breite einer
+      // künstlichen Textbox.
+      obj.scale=clamp(
+        startScale + delta / 100,
+        0.3,
+        3
+      );
+    }
+
+    applyEditorPosition(el,type,obj);
+  }
+
+  function end(){
+    handle.removeEventListener("pointermove",move);
+    handle.removeEventListener("pointerup",end);
+    handle.removeEventListener("pointercancel",end);
+    pendingEditSave = saveEditedObject(type,id);
+  }
+
+  handle.addEventListener("pointermove",move);
+  handle.addEventListener("pointerup",end);
+  handle.addEventListener("pointercancel",end);
+}
+
+function startLayoutRotate(e,el,type,id){
+  e.preventDefault(); e.stopPropagation();
+  const obj=getEditableObject(type,id); if(!obj)return;
+
+  const rect=$("#phonePreview").getBoundingClientRect();
+
+  const cx=
+    rect.left +
+    rect.width*(
+      Number(obj.x??50) +
+      (type==="slot" ? Number(obj.width??20)/2 : 0)
+    )/100;
+
+  const cy=
+    rect.top +
+    rect.height*(
+      Number(obj.y??50) +
+      (type==="slot" ? Number(obj.height??30)/2 : 0)
+    )/100;
+
+  const a0=
+    Math.atan2(
+      e.clientY-cy,
+      e.clientX-cx
+    )*180/Math.PI;
+
+  const r0=Number(obj.rotation||0);
+
+  const handle=e.currentTarget;
+  handle.setPointerCapture?.(e.pointerId);
+
+  function move(ev){
+    const a=
+      Math.atan2(
+        ev.clientY-cy,
+        ev.clientX-cx
+      )*180/Math.PI;
+
+    // Text und Grafik verwenden dieselbe Drehrichtung.
+    const direction = 1;
+    obj.rotation=clamp(
+      r0 + direction*(a-a0),
+      -180,
+      180
+    );
+
+    applyEditorPosition(el,type,obj);
+  }
+
+  function end(){
+    handle.removeEventListener("pointermove",move);
+    handle.removeEventListener("pointerup",end);
+    handle.removeEventListener("pointercancel",end);
+    pendingEditSave = saveEditedObject(type,id);
+  }
+
+  handle.addEventListener("pointermove",move);
+  handle.addEventListener("pointerup",end);
+  handle.addEventListener("pointercancel",end);
+}
+
+function applyEditorPosition(el,type,obj){
+  el.style.left=`${obj.x??50}%`;
+
+  if(type==="text") {
+    el.style.bottom=`${100-(obj.y??89)}%`;
+
+    // Der Text bestimmt seine eigene Breite.
+    // Dadurch entspricht der goldene Bearbeitungsrahmen
+    // immer exakt der sichtbaren Textbreite.
+    el.style.width="max-content";
+    el.style.minWidth="max-content";
+    el.style.whiteSpace="nowrap";
+    el.style.display="block";
+    el.style.textAlign=obj.align||"center";
+    el.style.boxSizing="border-box";
+    el.style.overflow="visible";
+    el.style.transformOrigin="center center";
+
+    // Die Größe des Textes wird ausschließlich über scale gesteuert.
+    el.style.transform=
+      `translateX(-50%) rotate(${obj.rotation||0}deg) scale(${obj.scale||1})`;
+  } else {
+    el.style.top=`${obj.y??50}%`;
+
+    if(type==="slot"){
+      el.style.width=`${obj.width}%`;
+      el.style.height=`${obj.height}%`;
+      el.style.transform=
+        `rotate(${obj.rotation||0}deg)`;
+    }
+
+    if(type==="graphic"){
+      el.style.width=`${obj.width}%`;
+      el.style.transform=
+        `translate(-50%,-50%) rotate(${obj.rotation||0}deg)`;
+    }
+  }
+}
+
+async function saveEditedObject(type,id){
+  const d=eventData.design||{};
+  try{
+    if(type==="slot") {
+      await patch({design:{layout:{...d.layout,slots:[...(d.layout?.slots||[])]}}});
+    } else if(type==="graphic") {
+      const graphic=(d.graphics||[]).find(g=>g.id===id);
+      if(!graphic) return;
+      await patch({design:{graphics:[...(d.graphics||[])]}});
+    } else {
+      await patch({design:{text:{...d.text}}});
+    }
+  }catch(e){console.error(e)}
+}
+
+function makeLayout(n){
+ const s={1:[{id:"slot-1",x:7,y:8,width:86,height:70}],2:[{id:"slot-1",x:7,y:8,width:58,height:70},{id:"slot-2",x:69,y:8,width:24,height:70}],3:[{id:"slot-1",x:7,y:8,width:52,height:70},{id:"slot-2",x:64,y:8,width:29,height:29},{id:"slot-3",x:64,y:41,width:29,height:29}],4:[{id:"slot-1",x:7,y:8,width:41,height:29},{id:"slot-2",x:52,y:8,width:41,height:29},{id:"slot-3",x:7,y:45,width:41,height:29},{id:"slot-4",x:52,y:45,width:41,height:29}]}[n];return{id:`layout-${n}`,slots:s}}
+function makeSlots(n){const out={"slot-1":null,"slot-2":null,"slot-3":null,"slot-4":null};for(let i=1;i<=n;i++)out[`slot-${i}`]=eventData?.design?.slots?.[`slot-${i}`]??null;return out}
+async function patch(partial){
+ try{
+   const j=await fetch(`${FOTOBOX_BASE}/studio/api/live.php?id=${encodeURIComponent(eventId)}`,{method:"POST",cache:"no-store",headers:{"Content-Type":"application/json","Accept":"application/json"},body:JSON.stringify(partial)}).then(async r=>{const data=await r.json();if(!r.ok||!data.ok)throw new Error(data.error||`HTTP ${r.status}`);return data;});
+   eventData=FotoboxEventSchema.normalize({...eventData,...partial,design:{...(eventData.design||{}),...(partial.design||{})}});last=j.updatedAt||eventData.updatedAt;eventData.updatedAt=last;$("#syncDot").className="sync-dot live";if(!editMode)render();
+ }catch(e){$("#syncDot").className="sync-dot bad"}
+}
+$("#pinOpen").onclick=openEvent;
+
+document.querySelectorAll("#pinPad button").forEach(button=>{
+  button.addEventListener("click",()=>{
+    const key=button.dataset.pin;
+    let pin=$("#pinInput").value;
+
+    if(key==="clear"){
+      pin="";
+    }else if(key==="back"){
+      pin=pin.slice(0,-1);
+    }else if(pin.length<4){
+      pin+=key;
+    }
+
+    $("#pinInput").value=pin;
+    $("#pinError").textContent="";
+    $("#pinError").classList.remove("pin-error-large");
+
+    document.querySelectorAll("#pinDisplay span").forEach((dot,i)=>{
+      dot.classList.toggle("filled",i<pin.length);
+    });
+
+    $("#pinError").textContent="";
+  });
+});
+if(eventId && !boxMode){$("#pinGate").classList.add("hidden");$("#setupContent").classList.remove("hidden");load().then(()=>{step=Number(eventData?.design?.setupStep||1);render();startPolling()})}
+</script>
+</body>
+</html>
