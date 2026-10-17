@@ -1,41 +1,54 @@
-FOTOBOX STUDIO INSTALLER – Raspberry Pi
-=========================================
+Fotobox Studio Installer v1.0.1 — Vorabversion
+================================================
 
 Zweck
 -----
-Installiert die aus der aktuellen Fotobox exportierte Studio-Web-App und
-die zugehörigen Event-/Preview-API-Dateien in eine bestehende Photobooth-
-Installation unter /var/www/html.
+Installiert das Fotobox Studio in eine bestehende Photobooth-Installation
+unter /var/www/html. Diese Vorabversion ist noch nicht auf einem zweiten
+Raspberry Pi vollständig durchgetestet.
+
+Inhalt
+------
+- payload/studio: Studio-Weboberfläche und interne APIs
+- payload/api: externe Studio-API-Endpunkte
+- payload/renderer: Python-Renderer für Druckvorschau und Collagen
+- install.sh: prüfender Installer mit Backup
+
+Voraussetzungen
+---------------
+- bestehende Photobooth-Installation unter /var/www/html
+- /var/www/html/api und /var/www/html/data vorhanden
+- PHP mit exec() verfügbar
+- Python 3
+- Pillow für das verwendete System-Python (der Installer kann python3-pil
+  nach Rückfrage über apt installieren)
+- Benutzer und Home-Verzeichnis /home/fotobox
 
 Installation
 ------------
-1. ZIP vollständig auf den Raspberry Pi kopieren und entpacken.
+1. ZIP vollständig entpacken.
 2. Im entpackten Ordner ausführen:
       sudo bash install.sh
-3. Den Bestätigungsfragen folgen.
-4. Danach die URLs aus der Installerausgabe im Browser öffnen.
+3. Prüfen, dass die angezeigten Pfade zum Testsystem passen.
+4. Nach Abschluss die Studio-URL öffnen und ein Test-Event anlegen.
+5. Einen vollständigen Fotolauf sowie die Druckvorschau testen.
 
-Sicherheit und Daten
---------------------
-- Vorhandene Dateien werden unter /var/backups/fotobox-studio-installer/
-  mit Zeitstempel gesichert.
-- Der persistente Ordner /var/www/html/data/studio bleibt erhalten.
-- Die vorhandene guest-usb.php wird nur nach separater Bestätigung ersetzt.
-- Das Paket ist für eine bestehende Photobooth-Installation gedacht, nicht
-  für einen leeren Raspberry Pi.
-- Das Paket installiert keine Photobooth-Kernsoftware und keine Drucker-
-  oder Kamera-Treiber.
+Sicherheit und Grenzen
+----------------------
+- Vorhandene Studio-Dateien und Renderer werden unter
+  /var/backups/fotobox-studio-installer/<Zeitstempel>/ gesichert.
+- Der dauerhafte Datenordner /var/www/html/data/studio wird nicht gelöscht.
+- Vorhandene Eventdaten und Assets werden nicht rekursiv umberechtigt.
+- guest-usb.php wird nicht automatisch neu installiert, wenn sie fehlt.
+  Eine vorhandene guest-usb.php wird nur nach gesonderter Bestätigung ersetzt,
+  da USB-Helfer und systemd-Dienste hostabhängig sind.
+- Das Skript wurde hier nicht auf einem realen zweiten Raspberry Pi ausgeführt.
+  Die Syntaxprüfungen sind kein Nachweis einer vollständig funktionierenden
+  Installation.
+- Ein aktives Studio-Event ist für die Druckvorschau erforderlich.
+- Prüfe vor Installation stets die Dateien und erstelle zusätzlich ein Backup
+  der gesamten Photobooth-Installation.
 
-Wichtige Abhängigkeit
----------------------
-/var/www/html/api/studio-preview.php ruft
-/home/fotobox/studio_render_for_print.py auf. Dieses Skript wird nicht
-mitgeliefert, da es zur bestehenden Druck-/Render-Konfiguration gehört.
-Vor der Nutzung der Druckvorschau muss geprüft werden, dass es auf dem
-Zielgerät vorhanden und ausführbar ist.
-
-Hinweis
+Version
 -------
-Die Installerdateien stammen aus dem aktuellen Studio-Export vom
-Raspberry Pi des Anwenders. Vor Einsatz auf anderen Geräten zunächst auf
-einer Testinstallation prüfen.
+v1.0.1-pre-release — aktualisiert Renderer-Paketierung und Systemprüfungen.
