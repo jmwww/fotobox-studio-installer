@@ -4,10 +4,7 @@ const API_BASE = "api";
  * Raspberry Pi der Fotobox.
  * Die lokale Studio-API bleibt davon getrennt.
  */
-const FOTOBOX_HOSTS = new Set(["192.168.0.101", "192.168.178.254"]);
-const FOTOBOX_BASE = FOTOBOX_HOSTS.has(window.location.hostname)
-  ? window.location.origin
-  : "http://192.168.178.254";
+const FOTOBOX_BASE = window.location.origin;
 const GUEST_USB_API = `${FOTOBOX_BASE}/api/guest-usb.php`;
 const FOTOBOX_EVENTS_API = `${FOTOBOX_BASE}/api/studio-events.php`;
 let guestUsbPoll = null;
