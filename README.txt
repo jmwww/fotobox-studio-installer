@@ -1,4 +1,4 @@
-Fotobox Studio Installer v1.0.1 — Vorabversion
+Fotobox Studio Installer v1.0.2. — Vorabversion
 ================================================
 
 Zweck
