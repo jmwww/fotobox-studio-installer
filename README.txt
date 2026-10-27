@@ -1,11 +1,11 @@
-Fotobox Studio Installer v1.0.1 — Vorabversion
+Fotobox Studio Installer v1.0.2-beta.1.
 ================================================
 
 Zweck
 -----
 Installiert das Fotobox Studio in eine bestehende Photobooth-Installation
 unter /var/www/html. Diese Vorabversion ist noch nicht auf einem zweiten
-Raspberry Pi vollständig durchgetestet.
+Raspberry Pi vollständig durchgetestet. USB-Verwaltung und noch ausstehender Drucktest fehlt noch.
 
 Inhalt
 ------
