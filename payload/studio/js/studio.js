@@ -320,22 +320,22 @@ function renderGuestUsb(usbList) {
     button.addEventListener("click", refreshGuestUsb);
   });
 }
-
 async function refreshGuestUsb() {
   try {
     const result = await fotoboxUsbRequest();
     renderGuestUsb(result.usb || []);
     setFotoboxState("Fotobox verbunden", "ok");
   } catch (error) {
-    console.error(error);
-    setFotoboxState("Fotobox nicht erreichbar", "error");
+    console.error("USB-Status konnte nicht geladen werden:", error);
+
+    // Die Studio-/Event-API ist von der USB-Abfrage getrennt.
+    setFotoboxState("Studio verbunden – USB-Status nicht verfügbar", "error");
 
     const list = $("#guestUsbList");
     if (list) {
       list.innerHTML = `<div class="empty-state">
-        Die Fotobox ist momentan nicht erreichbar.
-        <br><br>
-        <strong>192.168.178.254</strong>
+        Die USB-Verwaltung ist auf diesem System nicht eingerichtet
+        oder der USB-Endpunkt ist nicht erreichbar.
       </div>`;
     }
   }

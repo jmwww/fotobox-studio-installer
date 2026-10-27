@@ -67,7 +67,7 @@ id fotobox >/dev/null 2>&1 || die "Benutzer 'fotobox' fehlt. Der Renderer erwart
 [[ -d /home/fotobox ]] || die "/home/fotobox fehlt."
 
 echo
-echo "Fotobox Studio Installer v1.0.1 (Vorabversion)"
+echo "Fotobox Studio Installer v1.0.2 (Vorabversion)"
 echo "Webroot:       $WEBROOT"
 echo "Studio:        $WEBROOT/studio"
 echo "Daten:         $DATA_ROOT (wird nicht gelöscht)"

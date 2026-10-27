@@ -1129,7 +1129,7 @@ def render_event(
     # Bilder
     # --------------------------------------------------------
 
-    asset_map = parse_asset_map()
+    asset_map = {}
 
     slot_assignments = design.get(
         "slots",
