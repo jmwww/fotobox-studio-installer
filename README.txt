@@ -7,6 +7,11 @@ Installiert das Fotobox Studio in eine bestehende Photobooth-Installation
 unter /var/www/html. Diese Vorabversion ist noch nicht auf einem zweiten
 Raspberry Pi vollständig durchgetestet. USB-Verwaltung und noch ausstehender Drucktest fehlt noch.
 
+Beta-Hinweise:
+- USB-Verwaltung ist auf dem Testsystem noch nicht eingerichtet.
+- Vollständiger Fotolauf und realer Druck sind noch nicht abschließend getestet.
+- Bilder und Grafiken aus der Mediathek müssen noch umfassender geprüft werden.
+
 Inhalt
 ------
 - payload/studio: Studio-Weboberfläche und interne APIs
